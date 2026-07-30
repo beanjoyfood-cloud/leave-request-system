@@ -535,27 +535,27 @@ async function goReview(){
 }
 function sr(l,v){return '<div class="summary-row"><span class="sum-label">'+l+'</span><span class="sum-val">'+v+'</span></div>';}
 
-// ── 中文翻譯（列印時，將越/泰/印尼文自由文字同步轉為中文對照）──
+// ── 中文翻譯（列印/預覽時，將越/泰/印尼文自由文字同步轉為中文對照）──
+// 注意：這裡改用不需金鑰、可在任何網站（包含 GitHub Pages）直接呼叫的免費翻譯服務 MyMemory，
+// 因為 Claude AI 的直接呼叫僅在 Claude 預覽環境內可用，脫離該環境後會因缺少金鑰而失敗。
 async function translateToChinese(texts){
-  const entries=Object.entries(texts).filter(([k,v])=>v&&v.trim());
-  if(entries.length===0)return{reason:'',proxy:'',remarks:''};
-  const payload=Object.fromEntries(entries);
-  const prompt='請將以下 JSON 物件中每一個值翻譯成繁體中文，只回傳翻譯後的 JSON 物件本身（key 需與輸入完全相同），不要加任何說明文字、前綴或 Markdown 符號：\n'+JSON.stringify(payload);
-  try{
-    const response=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})
-    });
-    const data=await response.json();
-    const text=(data.content||[]).map(b=>b.text||'').join('');
-    const clean=text.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
-    return{reason:parsed.reason||'',proxy:parsed.proxy||'',remarks:parsed.remarks||''};
-  }catch(err){
-    console.error('翻譯失敗',err);
-    return{reason:'',proxy:'',remarks:''};
-  }
+  const srcMap={vi:'vi',th:'th',id:'id'};
+  const src=srcMap[curLang];
+  const results={reason:'',proxy:'',remarks:''};
+  if(!src)return results;
+  const keys=Object.keys(texts).filter(k=>texts[k]&&texts[k].trim());
+  await Promise.all(keys.map(async k=>{
+    try{
+      const url='https://api.mymemory.translated.net/get?q='+encodeURIComponent(texts[k])+'&langpair='+src+'|zh-TW';
+      const res=await fetch(url);
+      const data=await res.json();
+      results[k]=(data&&data.responseData&&data.responseData.translatedText)?data.responseData.translatedText:'';
+    }catch(err){
+      console.error('翻譯失敗（'+k+'）',err);
+      results[k]='';
+    }
+  }));
+  return results;
 }
 
 function buildSlip(label,trans){
