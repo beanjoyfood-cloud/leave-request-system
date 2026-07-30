@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>請假單 / Leave Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;min-height:100vh}
+.app{max-width:420px;margin:0 auto;padding:16px}
+.page{display:none}.page.active{display:block}
+.top-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.top-bar h2{font-size:17px;font-weight:600;color:#1a1a1a;flex:1}
+.back-btn{background:none;border:none;padding:4px;cursor:pointer;color:#666;font-size:22px;display:flex;align-items:center}
+.field{margin-bottom:15px}
+label{font-size:13px;color:#666;display:block;margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;font-size:15px;padding:11px 13px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#1a1a1a;font-family:inherit;-webkit-appearance:none;appearance:none;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,0.1)}
+textarea{min-height:72px;resize:vertical}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+.btn{width:100%;padding:14px;font-size:15px;font-weight:600;border-radius:12px;border:none;cursor:pointer;font-family:inherit;margin-top:4px;transition:.15s}
+.btn.primary{background:#1a56a0;color:#fff}.btn.primary:active{background:#154a8a}
+.btn.primary:disabled{background:#a9c1de;cursor:default}
+.btn.ghost{background:#f0f0f0;color:#666}
+.btn.danger{background:#fdecea;color:#c0392b;border:1px solid #f5c6c6}
+.id-input-wrap{display:flex;gap:8px}
+.id-input-wrap input{flex:1}
+.id-input-wrap .query-btn{white-space:nowrap;padding:11px 18px;font-size:15px;font-weight:600;border-radius:10px;border:none;background:#1a56a0;color:#fff;cursor:pointer;font-family:inherit}
+.emp-card{display:flex;align-items:center;gap:12px;padding:13px;background:#eef4fb;border-radius:12px;margin-bottom:15px;border:1px solid #c5d9f0}
+.avatar{width:42px;height:42px;border-radius:50%;background:#1a56a0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.avatar.sm{width:32px;height:32px;font-size:13px}
+.emp-name-text{font-size:15px;font-weight:600;color:#1a1a1a}
+.emp-sub{font-size:12px;color:#555;margin-top:2px}
+.msg-err{font-size:13px;color:#c0392b;margin-top:6px;padding:10px 12px;background:#fdecea;border-radius:8px;border-left:3px solid #c0392b}
+.msg-ok{font-size:13px;color:#1a7a3c;margin-top:6px;padding:8px 12px;background:#e8f5e9;border-radius:8px}
+.leave-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:10px}
+.leave-chip{padding:12px 8px;border:1.5px solid #ddd;border-radius:10px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#333;line-height:1.4}
+.leave-chip.active{background:#1a56a0;color:#fff;border-color:#1a56a0}
+.doc-notice{display:none;margin-bottom:14px;padding:12px 14px;background:#fff8e1;border-radius:10px;border:1.5px solid #f9a825}
+.doc-notice.show{display:flex;gap:10px;align-items:flex-start}
+.doc-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.doc-text{font-size:13px;color:#6d4c00;line-height:1.6}
+.doc-text b{font-weight:700;display:block;margin-bottom:2px}
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+.date-info{font-size:12px;color:#555;margin-top:7px;margin-bottom:14px;line-height:1.7;white-space:pre-line;padding:8px 10px;background:#f8f8f8;border-radius:8px}
+.summary-card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:16px;border:1px solid #e5e5e5}
+.summary-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f0f0f0}
+.summary-row:last-child{border-bottom:none}
+.sum-label{font-size:13px;color:#888;flex-shrink:0}
+.sum-val{font-size:13px;color:#1a1a1a;font-weight:500;text-align:right;max-width:65%}
+.sum-notice{background:#fff8e1;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#6d4c00;border:1px solid #f9a825;display:none}
+.sum-notice.show{display:block}
+.step-dots{display:flex;gap:7px;justify-content:center;margin-bottom:18px}
+.dot{width:8px;height:8px;border-radius:50%;background:#ddd;transition:.2s}
+.dot.active{background:#1a56a0;width:20px;border-radius:4px}
+.dot.done{background:#2ecc71}
+.section-title{font-size:13px;font-weight:600;color:#888;margin-bottom:11px;padding-bottom:7px;border-bottom:1px solid #eee}
+.card-wrap{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #e5e5e5}
+.lang-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.lang-title{font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:6px;text-align:center}
+.lang-sub{font-size:13px;color:#888;margin-bottom:32px;text-align:center}
+.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:340px}
+.lang-btn{padding:20px 12px;border:1.5px solid #ddd;border-radius:14px;background:#fff;cursor:pointer;text-align:center;font-family:inherit}
+.lang-btn:active{background:#f0f0f0;border-color:#1a56a0}
+.lang-flag{font-size:32px;display:block;margin-bottom:6px}
+.lang-name{font-size:14px;font-weight:600;color:#1a1a1a;display:block}
+.lang-native{font-size:12px;color:#888;display:block;margin-top:2px}
+.admin-link{text-align:center;margin-top:20px}
+.admin-link button{background:none;border:none;font-size:13px;color:#aaa;cursor:pointer;padding:8px;font-family:inherit}
+/* 管理頁 */
+.emp-list-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #f0f0f0;background:#fff}
+.emp-list-item:last-child{border-bottom:none}
+.emp-list-info{flex:1}
+.emp-list-name{font-size:14px;font-weight:600;color:#1a1a1a}
+.emp-list-sub{font-size:12px;color:#888;margin-top:1px}
+.del-btn{background:none;border:1px solid #f5c6c6;border-radius:8px;color:#c0392b;font-size:12px;padding:5px 10px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.add-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.add-row input{font-size:14px;padding:9px 11px}
+.add-full{grid-column:1/-1}
+.admin-save{background:#1a56a0;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:8px;font-family:inherit}
+.admin-save:active{background:#154a8a}
+.save-ok{font-size:13px;color:#1a7a3c;padding:8px 12px;background:#e8f5e9;border-radius:8px;margin-top:8px;display:none;text-align:center}
+.pw-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.pw-card{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:340px;border:1px solid #e5e5e5}
+.pw-title{font-size:16px;font-weight:600;color:#1a1a1a;margin-bottom:4px;text-align:center}
+.pw-sub{font-size:13px;color:#888;text-align:center;margin-bottom:20px}
+.search-emp{margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- 語言選擇 -->
+<div class="lang-page" id="langPage">
+  <div class="lang-title">請假單系統</div>
+  <div class="lang-sub">請選擇語言 / Please select language</div>
+  <div id="syncStatus" style="font-size:11px;color:#aaa;text-align:center;margin-top:-22px;margin-bottom:22px"></div>
+  <div class="lang-grid">
+    <button class="lang-btn" onclick="setLang('zh')"><span class="lang-flag">🇹🇼</span><span class="lang-name">繁體中文</span><span class="lang-native">中文</span></button>
+    <button class="lang-btn" onclick="setLang('vi')"><span class="lang-flag">🇻🇳</span><span class="lang-name">Tiếng Việt</span><span class="lang-native">越南語</span></button>
+    <button class="lang-btn" onclick="setLang('th')"><span class="lang-flag">🇹🇭</span><span class="lang-name">ภาษาไทย</span><span class="lang-native">泰語</span></button>
+    <button class="lang-btn" onclick="setLang('id')"><span class="lang-flag">🇮🇩</span><span class="lang-name">Bahasa Indonesia</span><span class="lang-native">印尼語</span></button>
+  </div>
+  <div class="admin-link"><button onclick="showPw()">⚙️ 員工管理</button></div>
+</div>
+
+<!-- 密碼輸入 -->
+<div class="pw-wrap" id="pwPage" style="display:none">
+  <div class="pw-card">
+    <div class="pw-title">⚙️ 員工管理</div>
+    <div class="pw-sub">請輸入管理密碼</div>
+    <div class="field"><input type="password" id="pwInput" placeholder="密碼" onkeydown="if(event.key==='Enter')checkPw()"></div>
+    <div id="pwErr" style="font-size:13px;color:#c0392b;margin-bottom:10px;display:none">密碼錯誤，請再試一次</div>
+    <button class="admin-save" onclick="checkPw()">進入管理</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="backToLang()">返回</button>
+  </div>
+</div>
+
+<!-- 管理頁 -->
+<div class="app" id="adminPage" style="display:none">
+  <div class="top-bar">
+    <button class="back-btn" onclick="backToLang()">&#8592;</button>
+    <h2>⚙️ 員工管理</h2>
+  </div>
+
+  <div class="card-wrap" style="background:#eef4fb;border-color:#c5d9f0">
+    <div style="font-size:13px;color:#1a4a80;line-height:1.7">
+      ℹ️ <b>員工名單已改為自動同步 Google 試算表。</b><br>
+      新增／刪除／修改員工請直接到 HR 維護的 Google 試算表操作，所有人打開本系統時會自動抓最新名單，<b>不需要在這裡手動新增或匯出檔案</b>。<br>
+      下方的新增／刪除功能僅作為「試算表暫時連不上時」的緊急備用，在這裡的變更不會同步回 Google 試算表，且下次成功同步後會被覆蓋。
+    </div>
+  </div>
+  <button class="btn ghost" onclick="loadEmpsFromSheet()">🔄 重新同步試算表</button>
+
+  <div class="card-wrap">
+    <div class="section-title">新增員工（緊急備用，不會同步到試算表）</div>
+    <div class="add-row">
+      <div><label>工號</label><input type="text" id="newId" placeholder="例：1336" inputmode="numeric"></div>
+      <div><label>姓名</label><input type="text" id="newName" placeholder="姓名"></div>
+    </div>
+    <div class="field"><label>部門</label><input type="text" id="newDept" placeholder="部門"></div>
+    <button class="admin-save" onclick="addEmp()">＋ 新增</button>
+    <div id="addMsg" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card-wrap" style="padding:0;overflow:hidden">
+    <div style="padding:14px 16px 10px;border-bottom:1px solid #f0f0f0">
+      <div class="section-title" style="margin-bottom:8px">員工名單（<span id="empCount">0</span> 人）</div>
+      <input type="text" class="search-emp" id="empSearch" placeholder="搜尋姓名、工號、部門" oninput="renderAdminList()">
+    </div>
+    <div id="adminEmpList"></div>
+  </div>
+
+  <div class="card-wrap" style="background:#fffbe6;border-color:#f9a825">
+    <div style="font-size:13px;color:#6d4c00;line-height:1.7">
+      ⚠️ <b>注意：</b>下方「匯出更新檔案」僅用於備份或緊急情況下的離線名單，正常情況下不需要使用。<br>
+      正式的新增／刪除員工，請到 Google 試算表操作。
+    </div>
+  </div>
+  <button class="btn primary" onclick="exportFile()">📥 匯出備用檔案</button>
+  <div class="save-ok" id="saveOk">✓ 已下載，請將新檔案傳給員工</div>
+</div>
+
+<!-- 主系統 -->
+<div class="app" id="mainApp" style="display:none">
+<div class="step-dots" id="dots">
+  <div class="dot active" id="d0"></div><div class="dot" id="d1"></div>
+  <div class="dot" id="d2"></div><div class="dot" id="d3"></div>
+</div>
+<div class="page active" id="p0">
+  <div class="top-bar"><h2 id="t-title-0"></h2></div>
+  <div class="card-wrap">
+    <div class="section-title" id="t-empno-label"></div>
+    <div class="field">
+      <label id="t-empno"></label>
+      <div class="id-input-wrap">
+        <input type="text" id="idInput" inputmode="numeric" maxlength="6" oninput="clearEmpResult()" onkeydown="if(event.key==='Enter')lookupEmp()">
+        <button class="query-btn" id="t-query" onclick="lookupEmp()"></button>
+      </div>
+      <div id="empMsg"></div>
+    </div>
+    <div id="empResult" style="display:none">
+      <div class="emp-card" id="empCard"></div>
+      <div class="field">
+        <label id="t-jobtype-label"></label>
+        <select id="empType">
+          <option value="正職" id="t-fulltime"></option>
+          <option value="兼職" id="t-parttime"></option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <button class="btn primary" id="nextBtn0" style="display:none" onclick="goPage(1)"></button>
+</div>
+<div class="page" id="p1">
+  <div class="top-bar"><button class="back-btn" onclick="goPage(0)">&#8592;</button><h2 id="t-title-1"></h2></div>
+  <div class="card-wrap">
+    <div id="empCardP1"></div>
+    <div class="section-title" id="t-leavetype-label"></div>
+    <div class="leave-grid" id="leaveGrid"></div>
+    <div class="doc-notice" id="docNotice">
+      <div class="doc-icon">📋</div>
+      <div class="doc-text"><b id="docTitle"></b><span id="docBody"></span></div>
+    </div>
+  </div>
+  <button class="btn primary" id="t-next1" onclick="goPage(2)"></button>
+</div>
+<div class="page" id="p2">
+  <div class="top-bar"><button class="back-btn" onclick="goPage(1)">&#8592;</button><h2 id="t-title-2"></h2></div>
+  <div class="card-wrap">
+    <div class="section-title" id="t-date-section"></div>
+    <div class="field"><label id="t-applydate"></label><input type="date" id="applyDate"></div>
+    <div class="date-row">
+      <div class="field" style="margin-bottom:0"><label id="t-startdate"></label><input type="date" id="startDate" oninput="updateDateInfo()"></div>
+      <div class="field" style="margin-bottom:0"><label id="t-enddate"></label><input type="date" id="endDate" oninput="updateDateInfo()"></div>
+    </div>
+    <div class="date-info" id="dateInfo" style="display:none"></div>
+  </div>
+  <div class="card-wrap">
+    <div class="section-title" id="t-detail-section"></div>
+    <div class="field"><label id="t-duration"></label><input type="text" id="duration"></div>
+    <div class="field"><label id="t-reason"></label><textarea id="reason"></textarea></div>
+    <div class="field"><label id="t-proxy"></label><input type="text" id="proxy"></div>
+    <div class="field"><label id="t-remarks"></label><textarea id="remarks" style="min-height:50px"></textarea></div>
+  </div>
+  <button class="btn primary" id="t-next2" onclick="goReview()"></button>
+</div>
+<div class="page" id="p3">
+  <div class="top-bar"><button class="back-btn" onclick="goPage(2)">&#8592;</button><h2 id="t-title-3"></h2></div>
+  <div class="sum-notice" id="sumNotice"></div>
+  <div class="summary-card" id="summaryCard"></div>
+  <button class="btn primary" id="t-print" onclick="doPrint()"></button>
+  <button class="btn ghost" style="margin-top:10px" id="t-reset" onclick="resetAll()"></button>
+</div>
+</div>
+
+<script>
+const ADMIN_PW = '8435';
+
+let EMPS={
+  '1005':{name:'陳宏江',dept:'倉管課'},'1007':{name:'廖朝泉',dept:'製一課'},
+  '1013':{name:'徐名慧',dept:'業務部'},'1015':{name:'陳釗斌',dept:'二課生產組'},
+  '1017':{name:'劉冠廷',dept:'一課包裝組'},'1019':{name:'彭嘉威',dept:'製一課'},
+  '1022':{name:'周佳萱',dept:'業務部'},'1025':{name:'南替拉',dept:'二課生產組'},
+  '1026':{name:'阿南',dept:'二課生產組'},'1027':{name:'武文起',dept:'一課生產組'},
+  '1034':{name:'許秀如',dept:'衛管'},'1036':{name:'廖永春',dept:'倉管課'},
+  '1096':{name:'王麗珠',dept:'一課包裝組'},'1101':{name:'楊冠昌',dept:'物流課'},
+  '1106':{name:'莊金芳',dept:'採購'},'1118':{name:'朱鈺婷',dept:'業務部'},
+  '1123':{name:'顏子于',dept:'二課包裝組'},'1125':{name:'黃芳泉',dept:'工務'},
+  '1133':{name:'陳桂華',dept:'一課包裝組'},'1159':{name:'武文江',dept:'一課生產組'},
+  '1185':{name:'翰多佑',dept:'製一課'},'1189':{name:'黃郁軒',dept:'業務部'},
+  '1190':{name:'黃珈綺',dept:'二課包裝組'},'1203':{name:'姚淑怡',dept:'二課包裝組'},
+  '1211':{name:'洪珮芳',dept:'一課包裝組'},'1225':{name:'李佳玲',dept:'一課包裝組'},
+  '1236':{name:'蔡裕全',dept:'二課包裝組'},'1248':{name:'吉達功',dept:'二課生產組'},
+  '1261':{name:'黎巴生',dept:'一課生產組'},'1263':{name:'陽梅海',dept:'一課生產組'},
+  '1266':{name:'通才',dept:'一課生產組'},'1268':{name:'農文雄',dept:'製一課'},
+  '1272':{name:'陳品璇',dept:'一課包裝組'},'1273':{name:'黃麗花',dept:'二課包裝組'},
+  '1278':{name:'林育菁',dept:'業務部'},'1285':{name:'阮文成',dept:'一課生產組'},
+  '1286':{name:'楊淑華',dept:'一課包裝組'},'1292':{name:'帕拉梅',dept:'一課生產組'},
+  '1294':{name:'張惠菁',dept:'一課包裝組'},'1295':{name:'昂卡',dept:'一課生產組'},
+  '1298':{name:'阿努瓦',dept:'一課生產組'},'1300':{name:'劉沛妍',dept:'衛管'},
+  '1302':{name:'張惇量',dept:'二課包裝組'},'1305':{name:'黎攻山',dept:'二課生產組'},
+  '1307':{name:'唐家芳',dept:'技術部'},'1309':{name:'他那康',dept:'一課生產組'},
+  '1310':{name:'雷卡',dept:'一課生產組'},'1312':{name:'杜梁合',dept:'一課生產組'},
+  '1313':{name:'曾雅琴',dept:'一課生產組'},'1314':{name:'吳安娜',dept:'一課生產組'},
+  '1320':{name:'侨氏玲',dept:'一課生產組'},'1321':{name:'陳孟光',dept:'一課生產組'},
+  '1325':{name:'張宸瑋',dept:'管理部'},'1329':{name:'黃黎玉明',dept:'一課包裝組'},
+  '1330':{name:'黃瑋馨',dept:'業務部'},'1334':{name:'瓦如',dept:'一課生產組'}
+};
+
+// ── Google 試算表同步（HR 直接在試算表新增/刪除/修改員工，這裡自動抓最新名單）──
+const EMP_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/1nmuv4j4u14NoQ-ZFY5iR69SH-nOcsm1w7JTjIYDqpe4/gviz/tq?tqx=out:csv&gid=0';
+let empSyncStatus='loading';
+function renderEmpSyncNote(){
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  if(empSyncStatus==='loading')el.textContent='🔄 正在同步最新員工名單...';
+  else if(empSyncStatus==='ok')el.textContent='✓ 員工名單已同步';
+  else if(empSyncStatus==='empty')el.textContent='⚠ 試算表目前無資料，使用內建名單';
+  else el.textContent='⚠ 無法連線 Google 試算表，使用內建離線名單';
+}
+async function loadEmpsFromSheet(){
+  empSyncStatus='loading';renderEmpSyncNote();
+  try{
+    const res=await fetch(EMP_SHEET_CSV_URL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const parsed=Papa.parse(text,{header:true,skipEmptyLines:true,dynamicTyping:false,transformHeader:h=>h.trim()});
+    const newEmps={};
+    (parsed.data||[]).forEach(r=>{
+      const id=(r['工號']||'').toString().trim();
+      const name=(r['姓名']||'').toString().trim();
+      const dept=(r['部門']||'').toString().trim();
+      if(id&&name)newEmps[id]={name,dept};
+    });
+    if(Object.keys(newEmps).length>0){EMPS=newEmps;empSyncStatus='ok';}
+    else empSyncStatus='empty';
+  }catch(err){
+    console.error('讀取 Google 試算表失敗，使用內建離線名單',err);
+    empSyncStatus='error';
+  }
+  renderEmpSyncNote();
+  if(document.getElementById('adminPage')&&document.getElementById('adminPage').style.display!=='none')renderAdminList();
+}
+
+const WDAY={zh:['日','一','二','三','四','五','六'],vi:['CN','T2','T3','T4','T5','T6','T7'],th:['อา','จ','อ','พ','พฤ','ศ','ส'],id:['Min','Sen','Sel','Rab','Kam','Jum','Sab']};
+const LANGS={
+  zh:{
+    leaves:['事假','病假','特休','婚假','喪假','產假','陪產假','公假','補休','調休'],
+    docLeaves:{'病假':{title:'⚠️ 需附證明文件',body:'病假須附醫院診斷證明或就醫收據，請假後3日內繳交人事單位。'},'婚假':{title:'⚠️ 需附證明文件',body:'婚假須附結婚登記謄本或婚禮相關證明文件。'},'喪假':{title:'⚠️ 需附證明文件',body:'喪假須附死亡證明書或訃聞，請假後7日內繳交人事單位。'},'產假':{title:'⚠️ 需附證明文件',body:'產假須附醫院開立之預產期證明或出生證明。'},'陪產假':{title:'⚠️ 需附證明文件',body:'陪產假須附配偶出生證明或醫院證明文件。'}},
+    ui:{'title-0':'輸入工號','title-1':'選擇假別','title-2':'填寫資料','title-3':'確認送出','empno-label':'輸入工號','empno':'工號','query':'查詢','jobtype-label':'職別','fulltime':'正職','parttime':'兼職','leavetype-label':'假別','date-section':'日期','applydate':'申請日期','startdate':'開始日期','enddate':'結束日期','detail-section':'詳細資料','duration':'請假時數／天數','duration-ph':'例：1天、4小時、半天','reason':'事由','reason-ph':'請假事由','proxy':'代理人','proxy-ph':'代理人姓名','remarks':'備註（選填）','remarks-ph':'其他備註','next0':'下一步','next1':'下一步','next2':'確認預覽','print':'🖨 列印請假單','reset':'重新填寫','err-empty':'⚠️ 請輸入工號後再按查詢','err-notfound':'查無此工號，請確認後再輸入','ok':'✓ 查詢成功','err-date':'請填寫請假開始日期','err-popup':'請允許瀏覽器彈出視窗以列印','sum-emp':'員工','sum-dept':'部門','sum-type':'職別','sum-leave':'假別','sum-date':'請假日期','sum-reason':'事由','sum-proxy':'代理人','sum-remarks':'備註','sum-apply':'申請日期','sum-docnotice':'📋 注意：此假別須附證明文件，列印後請一併繳交人事單位。','slip-title':'請 假 單','slip-empno':'工  號','slip-name':'姓  名','slip-dept':'部  門','slip-jobtype':'職  別','slip-leave':'假  別','slip-applydate':'申請日期','slip-leavedate':'請假\n日期','slip-reason':'事  由','slip-proxy':'代理人','slip-remarks':'備  註','slip-sign1':'部門主管','slip-sign2':'人事主管','slip-sign3':'總  經  理','slip-sign4':'董  事  長','slip-copy1':'存根聯','slip-copy2':'人事聯','date-from':'請假日：','date-to':'至 ','date-days':'共 ','date-days2':' 天'}
+  },
+  vi:{
+    leaves:['Nghỉ việc\nriêng','Nghỉ bệnh','Nghỉ phép\nnăm','Nghỉ cưới','Nghỉ tang','Nghỉ thai\nsản','Nghỉ nuôi\ncon','Nghỉ công\nvụ','Nghỉ bù','Đổi ca'],
+    docLeaves:{'Nghỉ bệnh':{title:'⚠️ Cần nộp giấy tờ',body:'Nghỉ bệnh cần nộp giấy chứng nhận của bác sĩ hoặc bệnh viện trong vòng 3 ngày sau khi đi làm lại.'},'Nghỉ cưới':{title:'⚠️ Cần nộp giấy tờ',body:'Nghỉ cưới cần nộp giấy đăng ký kết hôn hoặc giấy mời đám cưới.'},'Nghỉ tang':{title:'⚠️ Cần nộp giấy tờ',body:'Nghỉ tang cần nộp giấy chứng tử hoặc cáo phó trong vòng 7 ngày.'},'Nghỉ thai\nsản':{title:'⚠️ Cần nộp giấy tờ',body:'Nghỉ thai sản cần nộp giấy xác nhận ngày dự sinh hoặc giấy khai sinh của bé.'},'Nghỉ nuôi\ncon':{title:'⚠️ Cần nộp giấy tờ',body:'Cần nộp giấy khai sinh của trẻ hoặc giấy xác nhận của bệnh viện.'}},
+    ui:{'title-0':'Nhập mã NV','title-1':'Chọn loại nghỉ','title-2':'Điền thông tin','title-3':'Xác nhận','empno-label':'Nhập mã nhân viên','empno':'Mã nhân viên','query':'Tìm','jobtype-label':'Loại hợp đồng','fulltime':'Toàn thời gian','parttime':'Bán thời gian','leavetype-label':'Loại nghỉ phép','date-section':'Ngày tháng','applydate':'Ngày đăng ký','startdate':'Ngày bắt đầu','enddate':'Ngày kết thúc','detail-section':'Chi tiết','duration':'Số ngày / giờ nghỉ','duration-ph':'VD: 1 ngày, 4 giờ, nửa ngày','reason':'Lý do','reason-ph':'Lý do xin nghỉ','proxy':'Người thay thế','proxy-ph':'Tên người thay thế','remarks':'Ghi chú (tùy chọn)','remarks-ph':'Ghi chú khác','next0':'Tiếp theo','next1':'Tiếp theo','next2':'Xem trước','print':'🖨 In đơn nghỉ phép','reset':'Điền lại','err-empty':'⚠️ Vui lòng nhập mã nhân viên trước khi tìm kiếm','err-notfound':'Không tìm thấy mã nhân viên, vui lòng kiểm tra lại','ok':'✓ Tìm thấy','err-date':'Vui lòng điền ngày bắt đầu nghỉ','err-popup':'Vui lòng cho phép cửa sổ pop-up để in','sum-emp':'Nhân viên','sum-dept':'Phòng ban','sum-type':'Loại HĐ','sum-leave':'Loại nghỉ','sum-date':'Ngày nghỉ','sum-reason':'Lý do','sum-proxy':'Người thay','sum-remarks':'Ghi chú','sum-apply':'Ngày đăng ký','sum-docnotice':'📋 Lưu ý: Loại nghỉ này cần nộp giấy tờ kèm theo cho bộ phận nhân sự.','slip-title':'ĐƠN XIN NGHỈ PHÉP','slip-empno':'Mã NV','slip-name':'Họ tên','slip-dept':'Phòng ban','slip-jobtype':'Loại HĐ','slip-leave':'Loại nghỉ','slip-applydate':'Ngày đăng ký','slip-leavedate':'Ngày\nnghỉ','slip-reason':'Lý do','slip-proxy':'Người\nthay','slip-remarks':'Ghi\nchú','slip-sign1':'Trưởng phòng','slip-sign2':'Nhân sự','slip-sign3':'Tổng GĐ','slip-sign4':'Chủ tịch','slip-copy1':'Lưu gốc','slip-copy2':'Nhân sự','date-from':'Ngày nghỉ: ','date-to':'đến ','date-days':'Tổng ','date-days2':' ngày'}
+  },
+  th:{
+    leaves:['ลากิจ','ลาป่วย','ลาพักร้อน','ลาแต่งงาน','ลางาน\nศพ','ลาคลอด','ลาเลี้ยงดู\nบุตร','ลาราชการ','หยุดชดเชย','สลับวัน\nหยุด'],
+    docLeaves:{'ลาป่วย':{title:'⚠️ ต้องแนบเอกสาร',body:'ลาป่วยต้องแนบใบรับรองแพทย์หรือใบเสร็จค่ารักษาพยาบาล ภายใน 3 วันหลังกลับมาทำงาน'},'ลาแต่งงาน':{title:'⚠️ ต้องแนบเอกสาร',body:'ลาแต่งงานต้องแนบสำเนาทะเบียนสมรสหรือบัตรเชิญงานแต่งงาน'},'ลางาน\nศพ':{title:'⚠️ ต้องแนบเอกสาร',body:'ลางานศพต้องแนบใบมรณบัตรหรือหนังสือแจ้งข่าวการเสียชีวิต ภายใน 7 วัน'},'ลาคลอด':{title:'⚠️ ต้องแนบเอกสาร',body:'ลาคลอดต้องแนบใบรับรองแพทย์ระบุวันคลอดหรือสูติบัตรของบุตร'},'ลาเลี้ยงดู\nบุตร':{title:'⚠️ ต้องแนบเอกสาร',body:'ต้องแนบสูติบัตรของบุตรหรือใบรับรองจากโรงพยาบาล'}},
+    ui:{'title-0':'กรอกรหัสพนักงาน','title-1':'เลือกประเภทลา','title-2':'กรอกข้อมูล','title-3':'ยืนยัน','empno-label':'กรอกรหัสพนักงาน','empno':'รหัสพนักงาน','query':'ค้นหา','jobtype-label':'ประเภทสัญญา','fulltime':'พนักงานประจำ','parttime':'พนักงานพาร์ทไทม์','leavetype-label':'ประเภทการลา','date-section':'วันที่','applydate':'วันที่ยื่น','startdate':'วันที่เริ่ม','enddate':'วันที่สิ้นสุด','detail-section':'รายละเอียด','duration':'จำนวนวัน/ชั่วโมง','duration-ph':'เช่น 1 วัน, 4 ชั่วโมง, ครึ่งวัน','reason':'เหตุผล','reason-ph':'เหตุผลในการลา','proxy':'ผู้รับมอบหมาย','proxy-ph':'ชื่อผู้รับมอบหมาย','remarks':'หมายเหตุ (ถ้ามี)','remarks-ph':'หมายเหตุอื่นๆ','next0':'ถัดไป','next1':'ถัดไป','next2':'ตรวจสอบ','print':'🖨 พิมพ์ใบลา','reset':'กรอกใหม่','err-empty':'⚠️ กรุณากรอกรหัสพนักงานก่อนกดค้นหา','err-notfound':'ไม่พบรหัสพนักงาน กรุณาตรวจสอบอีกครั้ง','ok':'✓ พบข้อมูลแล้ว','err-date':'กรุณากรอกวันที่เริ่มลา','err-popup':'กรุณาอนุญาต popup เพื่อพิมพ์','sum-emp':'พนักงาน','sum-dept':'แผนก','sum-type':'ประเภท','sum-leave':'ประเภทลา','sum-date':'วันที่ลา','sum-reason':'เหตุผล','sum-proxy':'ผู้รับมอบ','sum-remarks':'หมายเหตุ','sum-apply':'วันที่ยื่น','sum-docnotice':'📋 หมายเหตุ: ประเภทการลานี้ต้องแนบเอกสารประกอบ กรุณายื่นต่อฝ่ายบุคคล','slip-title':'ใบลาหยุดงาน','slip-empno':'รหัส','slip-name':'ชื่อ-สกุล','slip-dept':'แผนก','slip-jobtype':'ประเภท','slip-leave':'ประเภทลา','slip-applydate':'วันที่ยื่น','slip-leavedate':'วันที่\nลา','slip-reason':'เหตุผล','slip-proxy':'ผู้รับ\nมอบ','slip-remarks':'หมาย\nเหตุ','slip-sign1':'หัวหน้างาน','slip-sign2':'HR','slip-sign3':'ผู้จัดการ\nทั่วไป','slip-sign4':'ประธาน','slip-copy1':'สำเนา','slip-copy2':'ฝ่ายบุคคล','date-from':'วันลา: ','date-to':'ถึง ','date-days':'รวม ','date-days2':' วัน'}
+  },
+  id:{
+    leaves:['Izin','Sakit','Cuti\nTahunan','Pernikahan','Duka\ncita','Melahirkan','Merawat\nAnak','Dinas','Cuti\nPengganti','Tukar\nLibur'],
+    docLeaves:{'Sakit':{title:'⚠️ Wajib melampirkan dokumen',body:'Cuti sakit harus melampirkan surat keterangan dokter atau kwitansi berobat, diserahkan dalam 3 hari setelah masuk kerja.'},'Pernikahan':{title:'⚠️ Wajib melampirkan dokumen',body:'Cuti pernikahan harus melampirkan fotokopi akta nikah atau undangan pernikahan.'},'Duka\ncita':{title:'⚠️ Wajib melampirkan dokumen',body:'Cuti duka harus melampirkan akta kematian atau surat berita duka dalam 7 hari.'},'Melahirkan':{title:'⚠️ Wajib melampirkan dokumen',body:'Cuti melahirkan harus melampirkan surat keterangan dokter mengenai HPL atau akta kelahiran bayi.'},'Merawat\nAnak':{title:'⚠️ Wajib melampirkan dokumen',body:'Harus melampirkan akta kelahiran anak atau surat keterangan dari rumah sakit.'}},
+    ui:{'title-0':'Masukkan ID Karyawan','title-1':'Pilih Jenis Cuti','title-2':'Isi Data','title-3':'Konfirmasi','empno-label':'Masukkan ID Karyawan','empno':'ID Karyawan','query':'Cari','jobtype-label':'Jenis Kontrak','fulltime':'Karyawan Tetap','parttime':'Paruh Waktu','leavetype-label':'Jenis Cuti','date-section':'Tanggal','applydate':'Tanggal Pengajuan','startdate':'Tanggal Mulai','enddate':'Tanggal Selesai','detail-section':'Detail','duration':'Jumlah hari / jam','duration-ph':'Mis: 1 hari, 4 jam, setengah hari','reason':'Alasan','reason-ph':'Alasan pengajuan cuti','proxy':'Pengganti','proxy-ph':'Nama pengganti','remarks':'Catatan (opsional)','remarks-ph':'Catatan lain','next0':'Selanjutnya','next1':'Selanjutnya','next2':'Pratinjau','print':'🖨 Cetak Formulir','reset':'Isi Ulang','err-empty':'⚠️ Masukkan ID karyawan sebelum mencari','err-notfound':'ID tidak ditemukan, periksa kembali','ok':'✓ Data ditemukan','err-date':'Masukkan tanggal mulai cuti','err-popup':'Izinkan popup browser untuk mencetak','sum-emp':'Karyawan','sum-dept':'Departemen','sum-type':'Kontrak','sum-leave':'Jenis Cuti','sum-date':'Tanggal Cuti','sum-reason':'Alasan','sum-proxy':'Pengganti','sum-remarks':'Catatan','sum-apply':'Tgl Pengajuan','sum-docnotice':'📋 Perhatian: Jenis cuti ini wajib melampirkan dokumen pendukung ke HRD.','slip-title':'FORMULIR IZIN / CUTI','slip-empno':'ID','slip-name':'Nama','slip-dept':'Dept','slip-jobtype':'Kontrak','slip-leave':'Jenis Cuti','slip-applydate':'Tgl Pengajuan','slip-leavedate':'Tanggal\nCuti','slip-reason':'Alasan','slip-proxy':'Pengganti','slip-remarks':'Catatan','slip-sign1':'Kepala Bagian','slip-sign2':'HRD','slip-sign3':'Manajer\nUmum','slip-sign4':'Direktur','slip-copy1':'Arsip','slip-copy2':'HRD','date-from':'Tanggal: ','date-to':'s/d ','date-days':'Total ','date-days2':' hari'}
+  }
+};
+
+let curLang='zh', selEmp=null, selId='', selLeave='', curTrans={reason:'',proxy:'',remarks:''};
+
+// 雙語文字：非中文語言時，回傳「外文｜中文」；中文語言時只回傳中文
+function biText(key){
+  const U=LANGS[curLang].ui;
+  if(curLang==='zh')return U[key];
+  return U[key]+'｜'+LANGS.zh.ui[key];
+}
+
+// ── 管理功能 ──
+function showPw(){
+  document.getElementById('langPage').style.display='none';
+  document.getElementById('pwPage').style.display='flex';
+  document.getElementById('pwInput').value='';
+  document.getElementById('pwErr').style.display='none';
+}
+function backToLang(){
+  document.getElementById('langPage').style.display='flex';
+  document.getElementById('pwPage').style.display='none';
+  document.getElementById('adminPage').style.display='none';
+}
+function checkPw(){
+  if(document.getElementById('pwInput').value===ADMIN_PW){
+    document.getElementById('pwPage').style.display='none';
+    document.getElementById('adminPage').style.display='block';
+    renderAdminList();
+  } else {
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+function renderAdminList(){
+  const q=document.getElementById('empSearch').value.trim().toLowerCase();
+  const keys=Object.keys(EMPS).sort((a,b)=>Number(a)-Number(b));
+  const filtered=keys.filter(k=>{
+    const e=EMPS[k];
+    return !q||k.includes(q)||e.name.includes(q)||e.dept.toLowerCase().includes(q);
+  });
+  document.getElementById('empCount').textContent=keys.length;
+  document.getElementById('adminEmpList').innerHTML=filtered.length===0
+    ?'<div style="padding:16px;text-align:center;color:#aaa;font-size:13px">查無符合結果</div>'
+    :filtered.map(k=>{
+      const e=EMPS[k];
+      return `<div class="emp-list-item">
+        <div class="avatar sm">${e.name.slice(0,1)}</div>
+        <div class="emp-list-info">
+          <div class="emp-list-name">${e.name}</div>
+          <div class="emp-list-sub">${k} · ${e.dept}</div>
+        </div>
+        <button class="del-btn" onclick="delEmp('${k}')">刪除</button>
+      </div>`;
+    }).join('');
+}
+function addEmp(){
+  const id=document.getElementById('newId').value.trim();
+  const name=document.getElementById('newName').value.trim();
+  const dept=document.getElementById('newDept').value.trim();
+  const msg=document.getElementById('addMsg');
+  if(!id||!name||!dept){msg.innerHTML='<div class="msg-err">請填寫工號、姓名、部門</div>';return;}
+  if(EMPS[id]){msg.innerHTML='<div class="msg-err">工號 '+id+' 已存在（'+EMPS[id].name+'）</div>';return;}
+  EMPS[id]={name,dept};
+  document.getElementById('newId').value='';
+  document.getElementById('newName').value='';
+  document.getElementById('newDept').value='';
+  msg.innerHTML='<div class="msg-ok">✓ 已新增 '+name+'（'+id+'）</div>';
+  renderAdminList();
+}
+function delEmp(id){
+  if(!confirm('確定要刪除 '+EMPS[id].name+'（'+id+'）？')) return;
+  delete EMPS[id];
+  renderAdminList();
+}
+function exportFile(){
+  const empJson=JSON.stringify(EMPS,null,2);
+  const src=document.documentElement.outerHTML;
+  const updated=src.replace(/let EMPS=\{[\s\S]*?\};/, 'let EMPS='+empJson+';');
+  const blob=new Blob([updated],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='請假單系統.html';
+  a.click();
+  const ok=document.getElementById('saveOk');
+  ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',4000);
+}
+
+// ── 請假單功能 ──
+function setLang(lang){
+  curLang=lang;
+  const L=LANGS[lang];
+  document.getElementById('langPage').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  selLeave=L.leaves[0];
+  ['title-0','title-1','title-2','title-3','empno-label','empno','query','jobtype-label','leavetype-label','date-section','applydate','startdate','enddate','detail-section','duration','reason','proxy','remarks','next1','next2','print','reset'].forEach(id=>{const el=document.getElementById('t-'+id);if(el)el.textContent=biText(id);});
+  document.getElementById('t-fulltime').textContent=biText('fulltime');
+  document.getElementById('t-parttime').textContent=biText('parttime');
+  document.getElementById('nextBtn0').textContent=biText('next0');
+  document.getElementById('idInput').placeholder=biText('empno');
+  document.getElementById('duration').placeholder=biText('duration-ph');
+  document.getElementById('reason').placeholder=biText('reason-ph');
+  document.getElementById('proxy').placeholder=biText('proxy-ph');
+  document.getElementById('remarks').placeholder=biText('remarks-ph');
+  document.getElementById('applyDate').value=today();
+}
+function clearEmpResult(){
+  document.getElementById('empMsg').innerHTML='';
+  document.getElementById('empResult').style.display='none';
+  document.getElementById('nextBtn0').style.display='none';
+  selEmp=null;
+}
+function lookupEmp(){
+  const id=document.getElementById('idInput').value.trim();
+  const msg=document.getElementById('empMsg');
+  if(!id){msg.innerHTML='<div class="msg-err">'+biText('err-empty')+'</div>';return;}
+  const emp=EMPS[id];
+  if(!emp){msg.innerHTML='<div class="msg-err">'+biText('err-notfound')+' ('+id+')</div>';document.getElementById('empResult').style.display='none';document.getElementById('nextBtn0').style.display='none';return;}
+  selEmp=emp;selId=id;
+  msg.innerHTML='<div class="msg-ok">'+biText('ok')+'</div>';
+  document.getElementById('empCard').innerHTML=avatarCard(id,emp);
+  document.getElementById('empResult').style.display='block';
+  document.getElementById('nextBtn0').style.display='block';
+}
+function avatarCard(id,emp){
+  return '<div class="avatar">'+emp.name.slice(0,1)+'</div><div><div class="emp-name-text">'+emp.name+'</div><div class="emp-sub">'+id+' · '+emp.dept+'</div></div>';
+}
+function renderLeaveGrid(){
+  const zh=LANGS.zh.leaves;
+  document.getElementById('leaveGrid').innerHTML=LANGS[curLang].leaves.map((l,i)=>{
+    let disp=l.replace(/\n/g,'<br>');
+    if(curLang!=='zh')disp+='<br><span style="font-size:11px;opacity:.72">'+zh[i].replace(/\n/g,' ')+'</span>';
+    return '<div class="leave-chip'+(l===selLeave?' active':'')+'" onclick="pickLeave(\''+l.replace(/\n/g,'\\n')+'\')">'+disp+'</div>';
+  }).join('');
+  updateDocNotice();
+}
+function pickLeave(l){selLeave=l;renderLeaveGrid();}
+function updateDocNotice(){
+  const info=LANGS[curLang].docLeaves[selLeave];
+  const n=document.getElementById('docNotice');
+  if(info){
+    let body=info.body;
+    if(curLang!=='zh'){
+      const idx=LANGS[curLang].leaves.indexOf(selLeave);
+      const zhLeaveName=idx>=0?LANGS.zh.leaves[idx]:null;
+      const zhInfo=zhLeaveName?LANGS.zh.docLeaves[zhLeaveName]:null;
+      if(zhInfo)body+='\n｜'+zhInfo.body;
+    }
+    document.getElementById('docTitle').textContent=info.title;
+    document.getElementById('docBody').textContent=body;
+    n.classList.add('show');
+  } else n.classList.remove('show');
+}
+function goPage(n){
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===n));
+  for(let i=0;i<4;i++){const d=document.getElementById('d'+i);d.className='dot'+(i===n?' active':i<n?' done':'');}
+  if(n===1&&selEmp){document.getElementById('empCardP1').innerHTML='<div class="emp-card" style="margin-bottom:14px">'+avatarCard(selId,selEmp)+'</div>';renderLeaveGrid();}
+  window.scrollTo(0,0);
+}
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function updateDateInfo(){
+  const s=document.getElementById('startDate').value,e=document.getElementById('endDate').value;
+  const info=document.getElementById('dateInfo'),wd=WDAY[curLang];
+  if(!s){info.style.display='none';return;}
+  const sd=new Date(s);
+  const fmt=d=>(d.getFullYear()-1911)+'/'+(d.getMonth()+1)+'/'+d.getDate()+'('+wd[d.getDay()]+')';
+  let txt='';
+  if(!e||e===s)txt=biText('date-from')+fmt(sd);
+  else{const ed=new Date(e);const diff=Math.round((ed-sd)/86400000)+1;txt=biText('date-from')+fmt(sd)+'\n'+biText('date-to')+fmt(ed)+'\n'+biText('date-days')+diff+LANGS[curLang].ui['date-days2']+(curLang!=='zh'?'｜'+diff+LANGS.zh.ui['date-days2']:'');}
+  info.textContent=txt;info.style.display='block';
+}
+function toDate(dateStr){
+  if(!dateStr)return'';
+  const d=new Date(dateStr);
+  if(curLang==='zh')return(d.getFullYear()-1911)+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  return(d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+}
+async function goReview(){
+  const s=document.getElementById('startDate').value;
+  if(!s){alert(biText('err-date'));return;}
+  const btn=document.getElementById('t-next2'),orig=btn.textContent;
+  const e=document.getElementById('endDate').value||s,sd=new Date(s),ed=new Date(e);
+  const diff=Math.round((ed-sd)/86400000)+1,wd=WDAY[curLang];
+  const fmt=d=>(d.getMonth()+1)+'/'+d.getDate()+'('+wd[d.getDay()]+')';
+  const dateStr=s===e?fmt(sd):fmt(sd)+'～'+fmt(ed)+' ('+diff+LANGS[curLang].ui['date-days2']+')';
+  const dur=document.getElementById('duration').value;
+  const reasonRaw=document.getElementById('reason').value,proxyRaw=document.getElementById('proxy').value,remarksRaw=document.getElementById('remarks').value;
+  const type=document.getElementById('empType').options[document.getElementById('empType').selectedIndex].text;
+  const zhLeaveIdx=LANGS[curLang].leaves.indexOf(selLeave);
+  const zhLeaveName=zhLeaveIdx>=0?LANGS.zh.leaves[zhLeaveIdx].replace(/\n/g,' '):'';
+  const leaveDisplay=selLeave.replace(/\n/g,' ')+(curLang!=='zh'&&zhLeaveName?'｜'+zhLeaveName:'');
+  const needDoc=!!LANGS[curLang].docLeaves[selLeave];
+  const sn=document.getElementById('sumNotice');
+  if(needDoc){sn.textContent=biText('sum-docnotice');sn.classList.add('show');}else sn.classList.remove('show');
+
+  curTrans={reason:'',proxy:'',remarks:''};
+  if(curLang!=='zh'&&(reasonRaw||proxyRaw||remarksRaw)){
+    btn.textContent='⏳ 翻譯中...';btn.disabled=true;
+    curTrans=await translateToChinese({reason:reasonRaw,proxy:proxyRaw,remarks:remarksRaw});
+    btn.textContent=orig;btn.disabled=false;
+  }
+  const withZh=(raw,zh)=>{if(!raw)return'—';return raw+(curLang!=='zh'&&zh?'｜'+zh:'');};
+  const reason=withZh(reasonRaw,curTrans.reason);
+  const proxy=withZh(proxyRaw,curTrans.proxy);
+  const remarks=remarksRaw?withZh(remarksRaw,curTrans.remarks):'';
+
+  document.getElementById('summaryCard').innerHTML=sr(biText('sum-emp'),selEmp.name+' ('+selId+')')+sr(biText('sum-dept'),selEmp.dept)+sr(biText('sum-type'),type)+'<div class="summary-row"><span class="sum-label">'+biText('sum-leave')+'</span><span class="sum-val" style="color:#1a56a0;font-size:15px">'+leaveDisplay+'</span></div>'+sr(biText('sum-date'),dateStr+(dur?' '+dur:''))+sr(biText('sum-reason'),reason)+sr(biText('sum-proxy'),proxy)+(remarks?sr(biText('sum-remarks'),remarks):'')+sr(biText('sum-apply'),toDate(document.getElementById('applyDate').value));
+  goPage(3);
+}
+function sr(l,v){return '<div class="summary-row"><span class="sum-label">'+l+'</span><span class="sum-val">'+v+'</span></div>';}
+
+// ── 中文翻譯（列印時，將越/泰/印尼文自由文字同步轉為中文對照）──
+async function translateToChinese(texts){
+  const entries=Object.entries(texts).filter(([k,v])=>v&&v.trim());
+  if(entries.length===0)return{reason:'',proxy:'',remarks:''};
+  const payload=Object.fromEntries(entries);
+  const prompt='請將以下 JSON 物件中每一個值翻譯成繁體中文，只回傳翻譯後的 JSON 物件本身（key 需與輸入完全相同），不要加任何說明文字、前綴或 Markdown 符號：\n'+JSON.stringify(payload);
+  try{
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await response.json();
+    const text=(data.content||[]).map(b=>b.text||'').join('');
+    const clean=text.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    return{reason:parsed.reason||'',proxy:parsed.proxy||'',remarks:parsed.remarks||''};
+  }catch(err){
+    console.error('翻譯失敗',err);
+    return{reason:'',proxy:'',remarks:''};
+  }
+}
+
+function buildSlip(label,trans){
+  trans=trans||{};
+  const U=LANGS[curLang].ui,s=document.getElementById('startDate').value,e=document.getElementById('endDate').value||s;
+  const sd=new Date(s),ed=new Date(e),diff=Math.round((ed-sd)/86400000)+1,wd=WDAY[curLang];
+  const fmt=d=>(d.getMonth()+1)+'/'+d.getDate()+'('+wd[d.getDay()]+')';
+  const dateStr=s===e?fmt(sd):fmt(sd)+'\n'+U['date-to']+fmt(ed)+'\n'+U['date-days']+diff+U['date-days2'];
+  const dur=document.getElementById('duration').value,reason=document.getElementById('reason').value||'',proxy=document.getElementById('proxy').value||'',remarks=document.getElementById('remarks').value||'';
+  const type=document.getElementById('empType').options[document.getElementById('empType').selectedIndex].text;
+  const applyDate=toDate(document.getElementById('applyDate').value);
+  const isZh=curLang==='zh';
+  const zhLeaveIdx=LANGS[curLang].leaves.indexOf(selLeave);
+  const zhLeave=zhLeaveIdx>=0?LANGS.zh.leaves[zhLeaveIdx].replace(/\n/g,' '):'';
+  const leaveDisplay=selLeave.replace(/\n/g,' ')+(!isZh&&zhLeave?' ('+zhLeave+')':'');
+  const withZh=(orig,zh)=>orig+(!isZh&&zh?'<br><span style="color:#666;font-size:10px">('+zh+')</span>':'');
+  const reasonHtml=withZh(reason,trans.reason);
+  const proxyHtml=withZh(proxy,trans.proxy);
+  const remarksHtml=withZh(remarks,trans.remarks);
+  const cell=(txt,w,bold)=>'<div style="'+(w?'width:'+w+'px;':'flex:1;')+'border-right:1px solid #aaa;padding:2px 5px;font-size:'+(bold?'10':'13')+'px;'+(bold?'font-weight:bold;background:#f5f5f5;white-space:pre-line;':'')+'display:flex;align-items:center;justify-content:'+(bold?'center':'flex-start')+'">'+txt+'</div>';
+  const row=(c1,v1,c2,v2)=>'<div style="display:flex;border-bottom:1px solid #aaa;min-height:26px">'+cell(c1,68,true)+cell(v1,0,false)+cell(c2,68,true)+cell(v2,0,false)+'</div>';
+  const needDoc=!!LANGS[curLang].docLeaves[selLeave];
+  const docLine=needDoc?'<div style="font-size:10px;color:#8a5c00;background:#fff8e1;border:1px solid #f9a825;border-radius:4px;padding:4px 6px;margin-top:5px">📋 '+U['sum-docnotice'].replace('📋 ','')+'</div>':'';
+  return '<div style="width:46%;float:left;border:2px solid #000;padding:8px;font-family:\'新細明體\',\'PMingLiU\',\'Tahoma\',sans-serif;page-break-inside:avoid">'+'<div style="font-size:15px;font-weight:bold;text-align:center;letter-spacing:2px;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px">'+U['slip-title']+'</div>'+row(U['slip-empno'],selId,U['slip-name'],selEmp.name)+row(U['slip-dept'],selEmp.dept,U['slip-jobtype'],type)+row(U['slip-leave'],'<b style="font-size:14px">'+leaveDisplay+'</b>',U['slip-applydate'],'<span style="font-size:10px">'+applyDate+'</span>')+'<div style="display:flex;border-bottom:1px solid #aaa;min-height:46px"><div style="width:68px;border-right:1px solid #aaa;padding:2px 4px;font-size:10px;font-weight:bold;background:#f5f5f5;display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line">'+U['slip-leavedate']+'</div><div style="flex:1;padding:4px 6px;font-size:11px;white-space:pre-line;display:flex;align-items:center">'+dateStr+(dur?'\n'+dur:'')+'</div></div><div style="display:flex;border-bottom:1px solid #aaa;min-height:40px"><div style="width:68px;border-right:1px solid #aaa;padding:2px 4px;font-size:10px;font-weight:bold;background:#f5f5f5;display:flex;align-items:center;justify-content:center;white-space:pre-line;text-align:center">'+U['slip-reason']+'</div><div style="flex:1;padding:4px 6px;font-size:13px;display:flex;align-items:center">'+reasonHtml+'</div></div>'+row(U['slip-proxy'],proxyHtml,U['slip-remarks'],remarksHtml)+'<div style="display:flex;margin-top:6px;font-size:10px;gap:2px">'+[U['slip-sign1'],U['slip-sign2'],U['slip-sign3'],U['slip-sign4']].map(t=>'<div style="flex:1;border:1px solid #aaa;padding:3px 2px;min-height:36px;text-align:center;white-space:pre-line;line-height:1.4">'+t+'</div>').join('')+'</div>'+docLine+'<div style="font-size:9px;color:#999;text-align:right;margin-top:3px">'+label+'</div></div>';
+}
+async function doPrint(){
+  const U=LANGS[curLang].ui;
+  const btn=document.getElementById('t-print');
+  const origText=btn.textContent;
+  let trans={reason:'',proxy:'',remarks:''};
+  if(curLang!=='zh'){
+    const reason=document.getElementById('reason').value||'';
+    const proxy=document.getElementById('proxy').value||'';
+    const remarks=document.getElementById('remarks').value||'';
+    if(reason||proxy||remarks){
+      btn.textContent='⏳ 翻譯中...';
+      btn.disabled=true;
+      trans=await translateToChinese({reason,proxy,remarks});
+      btn.textContent=origText;
+      btn.disabled=false;
+    }
+  }
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Leave Form</title><style>body{margin:8mm;font-family:\'新細明體\',\'PMingLiU\',\'Tahoma\',sans-serif}.wrap{display:flex;gap:4%}@media print{@page{size:A4 landscape;margin:8mm}}</style></head><body><div class="wrap">'+buildSlip(U['slip-copy1'],trans)+buildSlip(U['slip-copy2'],trans)+'</div></body></html>';
+  const w=window.open('','_blank','width=850,height=550');
+  if(w){w.document.write(html);w.document.close();w.onload=function(){w.print()};}
+  else alert(biText('err-popup'));
+}
+function resetAll(){
+  selEmp=null;selId='';selLeave=LANGS[curLang].leaves[0];
+  document.getElementById('idInput').value='';
+  document.getElementById('empMsg').innerHTML='';
+  document.getElementById('empResult').style.display='none';
+  document.getElementById('nextBtn0').style.display='none';
+  ['startDate','endDate','duration','reason','proxy','remarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('applyDate').value=today();
+  document.getElementById('dateInfo').style.display='none';
+  document.getElementById('sumNotice').classList.remove('show');
+  goPage(0);
+}
+loadEmpsFromSheet();
+</script>
+</body>
+</html>
